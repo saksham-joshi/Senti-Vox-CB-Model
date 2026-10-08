@@ -106,7 +106,6 @@ def _isLetterGujaratiDigit(__order_of_cur_char : int ) -> bool :
 def _isLetterKannadaDigit(__order_of_cur_char : int) -> bool :
     return (__order_of_cur_char >= KANNADA_0 and __order_of_cur_char <= KANNADA_9)
 
-
 def senti_vox_tokenizer(__text : str) -> List[str] :
     lst = []
     __text = remove_urls_and_emails(__text)
@@ -119,27 +118,8 @@ def senti_vox_tokenizer(__text : str) -> List[str] :
 
         script_check_fnc = None
 
-        # ================= SCRIPTS =============
-        if _isLetterEnglish(order_of_cur_char) : script_check_fnc = _isLetterEnglish
-
-        elif _isLetterHindi(order_of_cur_char)  : script_check_fnc = _isLetterHindi
-
-        elif _isLetterBengali(order_of_cur_char)  : script_check_fnc = _isLetterBengali
-
-        elif _isLetterGujarati(order_of_cur_char)  : script_check_fnc = _isLetterGujarati
-
-        elif _isLetterGurumukhi(order_of_cur_char) : script_check_fnc = _isLetterGurumukhi
-
-        elif _isLetterTamil(order_of_cur_char) : script_check_fnc = _isLetterTamil
-
-        elif _isLetterTelugu(order_of_cur_char) : script_check_fnc = _isLetterTelugu
-
-        elif _isLetterKannada(order_of_cur_char) : script_check_fnc = _isLetterKannada
-
-        elif _isLetterMalayalam(order_of_cur_char) : script_check_fnc = _isLetterMalayalam
-
         # ================ DIGITS ================
-        elif _isLetterEnglishDigit(order_of_cur_char) : script_check_fnc = _isLetterEnglishDigit
+        if _isLetterEnglishDigit(order_of_cur_char) : script_check_fnc = _isLetterEnglishDigit
 
         elif _isLetterHindiDigit(order_of_cur_char) : script_check_fnc = _isLetterHindiDigit
 
@@ -156,6 +136,25 @@ def senti_vox_tokenizer(__text : str) -> List[str] :
         elif _isLetterKannadaDigit(order_of_cur_char) : script_check_fnc = _isLetterKannadaDigit
 
         elif _isLetterMalayalamDigit(order_of_cur_char) : script_check_fnc = _isLetterMalayalamDigit
+
+        # ================= SCRIPTS =============
+        elif _isLetterEnglish(order_of_cur_char) : script_check_fnc = _isLetterEnglish
+
+        elif _isLetterHindi(order_of_cur_char)  : script_check_fnc = _isLetterHindi
+
+        elif _isLetterBengali(order_of_cur_char)  : script_check_fnc = _isLetterBengali
+
+        elif _isLetterGujarati(order_of_cur_char)  : script_check_fnc = _isLetterGujarati
+
+        elif _isLetterGurumukhi(order_of_cur_char) : script_check_fnc = _isLetterGurumukhi
+
+        elif _isLetterTamil(order_of_cur_char) : script_check_fnc = _isLetterTamil
+
+        elif _isLetterTelugu(order_of_cur_char) : script_check_fnc = _isLetterTelugu
+
+        elif _isLetterKannada(order_of_cur_char) : script_check_fnc = _isLetterKannada
+
+        elif _isLetterMalayalam(order_of_cur_char) : script_check_fnc = _isLetterMalayalam
 
         # ============== MISCELLANEOUS =============
         elif order_of_cur_char == ORD_SPACE or order_of_cur_char == ORD_TAB or order_of_cur_char == ORD_NEWLINE:
@@ -174,5 +173,3 @@ def senti_vox_tokenizer(__text : str) -> List[str] :
         lst.append(__text[start_index : index])
 
     return lst
-
-# print(senti_vox_tokenizer("Hello there! I am doing great. What about you? My number is 12345 and my email is q123@gmail.com! https://claude.ai/chat/e%208537754-9e1c-44b0-9353-184541843583?token=q1w2e3 Tokenizer working great"))
