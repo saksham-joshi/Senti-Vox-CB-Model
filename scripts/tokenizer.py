@@ -1,5 +1,5 @@
 from typing import List, Final
-from urlAndEmailRemover import remove_urls_and_emails
+from scripts.url_email_remover import remove_urls_and_emails
 
 ORD_SPACE = ord(' ')
 ORD_NEWLINE = ord('\n')
