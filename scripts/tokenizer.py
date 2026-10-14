@@ -1,175 +1,257 @@
-from typing import List, Final
-from scripts.url_email_remover import remove_urls_and_emails
+from __future__ import annotations
 
-ORD_SPACE = ord(' ')
-ORD_NEWLINE = ord('\n')
-ORD_TAB = ord('\t')
+import re
+import unicodedata
+from typing import Dict, List, Optional, Tuple
 
-ENGLISH_A = ord("A")
-ENGLISH_a = ord("a")
-ENGLISH_Z = ord("Z")
-ENGLISH_z = ord("z")
-ENGLISH_0 = ord('0')
-ENGLISH_9 = ord('9')
+# --------------------------------------------------------------------------
+# Script tables, generated from unicodedata so nothing is typed by hand
+# --------------------------------------------------------------------------
 
-HINDI_START = 2304
-HINDI_END = 2431
-HINDI_0 = 2406
-HINDI_9 = 2415
+# Code point blocks per script. Only the blocks are listed here; which
+# characters inside them count as letters or digits comes from the category.
+_SCRIPT_BLOCKS: Dict[str, List[Tuple[int, int]]] = {
+    "latin": [(0x0030, 0x0039), (0x0041, 0x005A), (0x0061, 0x007A),
+              (0x00C0, 0x024F), (0x0300, 0x036F), (0x1E00, 0x1EFF)],
+    "devanagari": [(0x0900, 0x097F)],
+    "bengali": [(0x0980, 0x09FF)],
+    "gurmukhi": [(0x0A00, 0x0A7F)],
+    "gujarati": [(0x0A80, 0x0AFF)],
+    "odia": [(0x0B00, 0x0B7F)],
+    "tamil": [(0x0B80, 0x0BFF)],
+    "telugu": [(0x0C00, 0x0C7F)],
+    "kannada": [(0x0C80, 0x0CFF)],
+    "malayalam": [(0x0D00, 0x0D7F)],
+    "arabic": [(0x0600, 0x06FF), (0x0750, 0x077F), (0x08A0, 0x08FF),
+               (0xFB50, 0xFDFF), (0xFE70, 0xFEFF)],
+}
 
-BENGALI_START = 2432
-BENGALI_END = 2559
-BENGALI_0 = 2534
-BENGALI_9 = 2543
+Ranges = List[Tuple[int, int]]
 
-GURUMUKHI_START = 2560
-GURUMUKHI_END = 2687
-GURUMUKHI_0 = 2662
-GURUMUKHI_9 = 2671
 
-TAMIL_START = 2944
-TAMIL_END = 3071
-TAMIL_0 = 3046
-TAMIL_9 = 3055
+def _to_ranges(codepoints: List[int]) -> Ranges:
+    """Collapse a list of code points into inclusive (lo, hi) ranges."""
+    out: Ranges = []
+    for cp in sorted(codepoints):
+        if out and cp == out[-1][1] + 1:
+            out[-1] = (out[-1][0], cp)
+        else:
+            out.append((cp, cp))
+    return out
 
-TELUGU_START = 3072
-TELUGU_END = 3199
-TELUGU_0 = 	3174
-TELUGU_9 = 3183
 
-MALAYALAM_START = 3328
-MALAYALAM_END = 3455
-MALAYALAM_0 = 3430
-MALAYALAM_9 = 3439
+def _build_tables() -> Dict[str, Tuple[Ranges, List[Ranges]]]:
+    """script -> (letter ranges, [digit ranges, one entry per set of ten])."""
+    tables = {}
+    for script, blocks in _SCRIPT_BLOCKS.items():
+        letters: List[int] = []
+        digit_sets: Dict[int, List[int]] = {}
+        for lo, hi in blocks:
+            for cp in range(lo, hi + 1):
+                ch = chr(cp)
+                cat = unicodedata.category(ch)
+                if cat[0] in "LM":
+                    letters.append(cp)
+                elif cat == "Nd":
+                    # group by the "zero" of the set, so Arabic-Indic and
+                    # Extended Arabic-Indic digits stay separate tokens
+                    digit_sets.setdefault(cp - unicodedata.decimal(ch), []).append(cp)
+        tables[script] = (
+            _to_ranges(letters),
+            [_to_ranges(d) for _, d in sorted(digit_sets.items())],
+        )
+    return tables
 
-GUJARATI_START = 2688
-GUJARATI_END = 2815
-GUJARATI_0 = 2790
-GUJARATI_9 = 2799
 
-KANNADA_START = 3200
-KANNADA_END = 3327
-KANNADA_0 = 3302
-KANNADA_9 = 3311
+_TABLES = _build_tables()
 
-def _isLetterEnglish(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= ENGLISH_A and __order_of_cur_char <= ENGLISH_Z) or (__order_of_cur_char >= ENGLISH_a and __order_of_cur_char <= ENGLISH_z)
 
-def _isLetterHindi(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= HINDI_START and __order_of_cur_char <= HINDI_END)
+def export_tables() -> dict:
+    """Plain-data copy of the script tables, for generating the TS/Java port."""
+    return {
+        "unicode_version": unicodedata.unidata_version,
+        "scripts": {
+            name: {
+                "letters": [list(r) for r in letters],
+                "digit_sets": [[list(r) for r in ds] for ds in digits],
+            }
+            for name, (letters, digits) in _TABLES.items()
+        },
+    }
 
-def _isLetterBengali(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= BENGALI_START and __order_of_cur_char <= BENGALI_END)
 
-def _isLetterGurumukhi(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= GURUMUKHI_START and __order_of_cur_char <= GURUMUKHI_END)
+def _esc(cp: int) -> str:
+    return f"\\u{cp:04x}" if cp <= 0xFFFF else f"\\U{cp:08x}"
 
-def _isLetterTamil(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= TAMIL_START and __order_of_cur_char <= TAMIL_END)
 
-def _isLetterTelugu(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= TELUGU_START and __order_of_cur_char <= TELUGU_END)
+def _class_body(ranges: Ranges) -> str:
+    return "".join(_esc(lo) if lo == hi else f"{_esc(lo)}-{_esc(hi)}" for lo, hi in ranges)
 
-def _isLetterMalayalam(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= MALAYALAM_START and __order_of_cur_char <= MALAYALAM_END)
 
-def _isLetterGujarati(__order_of_cur_char: int) -> bool :
-    return (__order_of_cur_char >= GUJARATI_START and __order_of_cur_char <= GUJARATI_END)
+# --------------------------------------------------------------------------
+# Characters allowed inside a word
+# --------------------------------------------------------------------------
 
-def _isLetterKannada(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= KANNADA_START and __order_of_cur_char <= KANNADA_END)
+_JOINER = r"[\u200c\u200d]"
+_APOSTROPHE = r"[\u0027\u2019\u02bc]"
 
-def _isLetterEnglishDigit(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= ENGLISH_0 and __order_of_cur_char <= ENGLISH_9)
+# --------------------------------------------------------------------------
+# Token pattern
+# --------------------------------------------------------------------------
 
-def _isLetterHindiDigit(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= HINDI_0 and __order_of_cur_char <= HINDI_9)
 
-def _isLetterBengaliDigit(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= BENGALI_0 and __order_of_cur_char <= BENGALI_9)
+def _word(body: str) -> str:
+    # letters, optionally with ZWJ/ZWNJ between two letters
+    return rf"[{body}]+(?:{_JOINER}[{body}]+)*"
 
-def _isLetterGurumukhiDigit(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= GURUMUKHI_0 and __order_of_cur_char <= GURUMUKHI_9)
 
-def _isLetterTamilDigit(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= TAMIL_0 and __order_of_cur_char <= TAMIL_9)
+def _build_token_regex() -> "re.Pattern[str]":
+    """Matches words and emojis only.
 
-def _isLetterTeluguDigit(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= TELUGU_0 and __order_of_cur_char <= TELUGU_9)
+    Numbers, punctuation and other symbols have no alternative here, so
+    findall() steps over them and they never reach the returned list.
+    """
+    alts: List[str] = []
+    known: List[str] = []
 
-def _isLetterMalayalamDigit(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= MALAYALAM_0 and __order_of_cur_char <= MALAYALAM_9)
+    # Latin first, it is the most common case
+    order = ["latin"] + [s for s in _TABLES if s != "latin"]
+    for script in order:
+        letters, _ = _TABLES[script]
+        body = _class_body(letters)
+        known.append(body)
+        if script == "latin":
+            alts.append(rf"[{body}]+(?:{_APOSTROPHE}[{body}]+)*")
+        else:
+            alts.append(_word(body))
 
-def _isLetterGujaratiDigit(__order_of_cur_char : int ) -> bool :
-    return (__order_of_cur_char >= GUJARATI_0 and __order_of_cur_char <= GUJARATI_9)
+    keycap = r"[0-9#*]\ufe0f?\u20e3"
+    flag = r"[\U0001f1e6-\U0001f1ff]{2}"
+    emo_base = (r"[\u00a9\u00ae\u203c\u2049\u2122\u2139\u2194-\u21aa\u231a-\u23ff\u24c2"
+                r"\u25aa-\u25fe\u2600-\u27bf\u2934\u2935\u2b05-\u2b55\u3030\u303d"
+                r"\u3297\u3299\U0001f000-\U0001faff]")
+    skin = r"[\U0001f3fb-\U0001f3ff]"
+    emoji = (rf"{emo_base}\ufe0f?{skin}?"
+             rf"(?:\u200d{emo_base}\ufe0f?{skin}?)*"
+             r"[\U000e0020-\U000e007f]*")
 
-def _isLetterKannadaDigit(__order_of_cur_char : int) -> bool :
-    return (__order_of_cur_char >= KANNADA_0 and __order_of_cur_char <= KANNADA_9)
+    # a few plain-text emoticons: :) :( :D :P ;) :-) :'( and <3
+    emoticon = (r"(?:[:;=][-']?(?:\)+|\(+|[DPp](?![A-Za-z0-9]))"
+                r"|(?<![A-Za-z0-9])<3+(?![0-9]))")
 
-def senti_vox_tokenizer(__text : str) -> List[str] :
-    lst = []
-    __text = remove_urls_and_emails(__text)
-    index = 0
-    len : Final = __text.__len__()
+    # best-effort for scripts we do not list (Cyrillic, Greek, CJK, ...):
+    # a run of letters that is not one of our known scripts
+    other = rf"(?:(?![{''.join(known)}])[^\W\d_])+"
 
-    while index < len :
+    parts = alts + [keycap, flag, emoji, emoticon, other]
+    return re.compile("|".join(parts))
 
-        order_of_cur_char = ord(__text[index])
 
-        script_check_fnc = None
+_TOKEN = _build_token_regex()
 
-        # ================ DIGITS ================
-        if _isLetterEnglishDigit(order_of_cur_char) : script_check_fnc = _isLetterEnglishDigit
 
-        elif _isLetterHindiDigit(order_of_cur_char) : script_check_fnc = _isLetterHindiDigit
+# --------------------------------------------------------------------------
+# URLs and e-mail addresses
+# --------------------------------------------------------------------------
 
-        elif _isLetterBengaliDigit(order_of_cur_char) : script_check_fnc = _isLetterBengaliDigit
+_LOCAL = r"A-Za-z0-9!#$%&'*+/=?^_`{|}~\-\u00c0-\u024f"
+_LABEL = r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
 
-        elif _isLetterGujaratiDigit(order_of_cur_char) : script_check_fnc = _isLetterGujaratiDigit
+_EMAIL = (
+    r"(?:mailto:)?"
+    rf"(?<![{_LOCAL}.])"
+    rf"[{_LOCAL}]+(?:\.[{_LOCAL}]+)*"
+    rf"@(?:{_LABEL}\.)+[A-Za-z]{{2,}}"
+)
 
-        elif _isLetterGurumukhiDigit(order_of_cur_char) : script_check_fnc = _isLetterGurumukhiDigit
+# URL characters are ASCII only. If a Hindi word follows a URL with no space
+# between them, the word is not swallowed. The price is that URLs containing
+# raw non-ASCII characters are cut at the first one.
+_CH = r"[^\s()<>\"'\u0080-\U0010ffff]"
+_END = r"[^\s()<>\"'.,;:!?*\]}\u0080-\U0010ffff]"
+_TAIL = rf"(?:{_CH}|\({_CH}*\))*(?:\({_CH}*\)|{_END})"
 
-        elif _isLetterTamilDigit(order_of_cur_char) : script_check_fnc = _isLetterTamilDigit
+_URL = (
+    r"(?:(?i:https?|ftps?)://|(?<![A-Za-z0-9])(?i:www)\.)"
+    + _TAIL
+)
 
-        elif _isLetterTeluguDigit(order_of_cur_char) : script_check_fnc = _isLetterTeluguDigit
+# bare domains only when a path follows (bit.ly/xyz), and only for common TLDs,
+# so "Mr.Smith/John" is left alone
+_TLDS = (r"(?i:com|net|org|edu|gov|info|biz|io|co|in|me|ly|gl|tv|ai|app|dev|xyz"
+         r"|us|uk|be|to|link|page|site|online|store)")
+_BARE = (
+    r"(?<![A-Za-z0-9.@_\-])"
+    rf"(?:{_LABEL}\.)+{_TLDS}(?![A-Za-z0-9])"
+    rf"/(?:{_TAIL})?"
+)
 
-        elif _isLetterKannadaDigit(order_of_cur_char) : script_check_fnc = _isLetterKannadaDigit
+_PATTERN = re.compile(rf"{_EMAIL}|{_URL}|{_BARE}")
+_GATE = re.compile(r"[@/]|www\.", re.IGNORECASE)
+_SPACES = re.compile(r"[ \t]{2,}")
 
-        elif _isLetterMalayalamDigit(order_of_cur_char) : script_check_fnc = _isLetterMalayalamDigit
 
-        # ================= SCRIPTS =============
-        elif _isLetterEnglish(order_of_cur_char) : script_check_fnc = _isLetterEnglish
+def _remove_urls_and_emails(
+    text: str,
+    replacement: str = " ",
+    collapse_spaces: bool = False,
+) -> str:
+    """Remove (or replace) URLs and e-mail addresses in `text`.
 
-        elif _isLetterHindi(order_of_cur_char)  : script_check_fnc = _isLetterHindi
+    The replacement defaults to a space so the words on either side of a
+    removed URL never end up glued together.
+    """
+    if not text:
+        return text
 
-        elif _isLetterBengali(order_of_cur_char)  : script_check_fnc = _isLetterBengali
+    if _GATE.search(text):
+        text = _PATTERN.sub(replacement, text)
 
-        elif _isLetterGujarati(order_of_cur_char)  : script_check_fnc = _isLetterGujarati
+    if collapse_spaces:
+        text = _SPACES.sub(" ", text).strip()
+    return text
 
-        elif _isLetterGurumukhi(order_of_cur_char) : script_check_fnc = _isLetterGurumukhi
 
-        elif _isLetterTamil(order_of_cur_char) : script_check_fnc = _isLetterTamil
+# --------------------------------------------------------------------------
+# Public API
+# --------------------------------------------------------------------------
 
-        elif _isLetterTelugu(order_of_cur_char) : script_check_fnc = _isLetterTelugu
+# curly apostrophe and modifier-letter apostrophe -> plain apostrophe
+_APOS_FOLD = str.maketrans({0x2019: "'", 0x02BC: "'"})
 
-        elif _isLetterKannada(order_of_cur_char) : script_check_fnc = _isLetterKannada
 
-        elif _isLetterMalayalam(order_of_cur_char) : script_check_fnc = _isLetterMalayalam
+def senti_vox_tokenizer(
+    text: str,
+    *,
+    normalize: Optional[str] = "NFKC",
+    lowercase: bool = False,
+) -> List[str]:
+    """Split `text` into word and emoji tokens.
 
-        # ============== MISCELLANEOUS =============
-        elif order_of_cur_char == ORD_SPACE or order_of_cur_char == ORD_TAB or order_of_cur_char == ORD_NEWLINE:
-            index += 1
-            continue
+    Words are letter runs in any script (with ZWJ/ZWNJ inside Indic words and
+    apostrophes inside Latin ones). Emojis include ZWJ sequences, skin tones,
+    flags, keycaps and a few text emoticons like :) and <3. Numbers,
+    punctuation, other symbols, URLs and e-mail addresses are dropped.
 
-        else :
-            lst.append(__text[index])
-            index += 1
-            continue
+    normalize  Unicode normal form applied first ("NFKC" by default, None to
+               skip). It also folds curly apostrophes to a plain one.
+    lowercase  Lowercase the text before tokenizing. Off by default, in case
+               casing is handled on the lookup side.
 
-        start_index = index
+    Raises TypeError for anything that is not a str (None included).
+    """
+    if not isinstance(text, str):
+        raise TypeError(f"senti_vox_tokenizer expects str, got {type(text).__name__}")
+    if not text:
+        return []
 
-        while(index < len and script_check_fnc(ord(__text[index]))) : index += 1
+    # pure ASCII text needs neither normalisation nor apostrophe folding
+    if normalize and not text.isascii():
+        text = unicodedata.normalize(normalize, text).translate(_APOS_FOLD)
 
-        lst.append(__text[start_index : index])
+    text = _remove_urls_and_emails(text)
 
-    return lst
+    if lowercase:
+        text = text.lower()
+
+    return _TOKEN.findall(text)
