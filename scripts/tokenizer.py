@@ -224,7 +224,7 @@ def senti_vox_tokenizer(
     text: str,
     *,
     normalize: Optional[str] = "NFKC",
-    lowercase: bool = False,
+    lowercase: bool = True,
 ) -> List[str]:
     """Split `text` into word and emoji tokens.
 
