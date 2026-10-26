@@ -1,63 +1,1072 @@
 {
- "about": "Shared test vectors for the SentiVox tokenizer. Every port (Python, TypeScript, Java) must produce exactly 'expected' for 'input'. Options: normalize (default 'NFKC', null = off), lowercase (default false). Invisible characters are written as \\u escapes on purpose.",
- "cases": [
-  {"name": "english basic", "input": "This movie was GOOD!", "options": {}, "expected": ["This", "movie", "was", "GOOD"]},
-  {"name": "english lowercase option", "input": "This movie was GOOD!", "options": {"lowercase": true}, "expected": ["this", "movie", "was", "good"]},
-  {"name": "empty string", "input": "", "options": {}, "expected": []},
-  {"name": "only whitespace", "input": "   \n\t \r\n ", "options": {}, "expected": []},
-  {"name": "initialism", "input": "U.S.A rocks", "options": {}, "expected": ["U", "S", "A", "rocks"]},
-  {"name": "contractions", "input": "I don't like it, can’t stand it", "options": {}, "expected": ["I", "don't", "like", "it", "can't", "stand", "it"]},
-  {"name": "curly apostrophe kept when normalize is off", "input": "can’t", "options": {"normalize": null}, "expected": ["can’t"]},
-  {"name": "apostrophe edges", "input": "'quoted' dogs' rock'n'roll", "options": {}, "expected": ["quoted", "dogs", "rock'n'roll"]},
-  {"name": "danda is not part of the word", "input": "मैं बहुत खुश हूँ। सच में।", "options": {}, "expected": ["मैं", "बहुत", "खुश", "हूँ", "सच", "में"]},
-  {"name": "double danda", "input": "राम॥", "options": {}, "expected": ["राम"]},
-  {"name": "devanagari and ascii digits are dropped", "input": "साल२५ और abc123", "options": {}, "expected": ["साल", "और", "abc"]},
-  {"name": "digits of any script are dropped", "input": "12३", "options": {}, "expected": []},
-  {"name": "arabic-indic digits are dropped", "input": "٢٠٢٦ و ۲۰۲۶", "options": {}, "expected": ["و"]},
-  {"name": "mixed scripts without a space", "input": "हैLove", "options": {}, "expected": ["है", "Love"]},
-  {"name": "bengali ya-phala keeps ZWJ", "input": "র\u200d্যাব ভালো", "options": {}, "expected": ["র\u200d্যাব", "ভালো"]},
-  {"name": "hindi conjunct keeps ZWJ", "input": "क्\u200dष", "options": {}, "expected": ["क्\u200dष"]},
-  {"name": "trailing ZWNJ is dropped", "input": "कर\u200c हूँ", "options": {}, "expected": ["कर", "हूँ"]},
-  {"name": "lone ZWJ between words is ignored", "input": "a \u200d b", "options": {}, "expected": ["a", "b"]},
-  {"name": "CRLF", "input": "good\r\nbad", "options": {}, "expected": ["good", "bad"]},
-  {"name": "nbsp and ideographic space", "input": "good\u00a0bad\u3000ok", "options": {}, "expected": ["good", "bad", "ok"]},
-  {"name": "nbsp and ideographic space, normalize off", "input": "good\u00a0bad\u3000ok", "options": {"normalize": null}, "expected": ["good", "bad", "ok"]},
-  {"name": "zwsp and bom", "input": "\ufeffgood\u200bbad", "options": {}, "expected": ["good", "bad"]},
-  {"name": "control chars separate tokens", "input": "a\u0000b", "options": {}, "expected": ["a", "b"]},
-  {"name": "stray variation selector", "input": "ok\ufe0f", "options": {}, "expected": ["ok"]},
-  {"name": "accented latin", "input": "café naïve shukriyā", "options": {}, "expected": ["café", "naïve", "shukriyā"]},
-  {"name": "urdu", "input": "یہ بہت اچھا ہے۔", "options": {}, "expected": ["یہ", "بہت", "اچھا", "ہے"]},
-  {"name": "odia", "input": "ଏହା ବହୁତ ଭଲ", "options": {}, "expected": ["ଏହା", "ବହୁତ", "ଭଲ"]},
-  {"name": "bengali", "input": "খুব ভালো", "options": {}, "expected": ["খুব", "ভালো"]},
-  {"name": "telugu", "input": "చాలా బాగుంది", "options": {}, "expected": ["చాలా", "బాగుంది"]},
-  {"name": "kannada", "input": "ತುಂಬಾ ಚೆನ್ನಾಗಿದೆ", "options": {}, "expected": ["ತುಂಬಾ", "ಚೆನ್ನಾಗಿದೆ"]},
-  {"name": "malayalam", "input": "വളരെ നല്ലത്", "options": {}, "expected": ["വളരെ", "നല്ലത്"]},
-  {"name": "gujarati", "input": "ખૂબ સરસ છે", "options": {}, "expected": ["ખૂબ", "સરસ", "છે"]},
-  {"name": "gurmukhi", "input": "ਬਹੁਤ ਵਧੀਆ ਹੈ", "options": {}, "expected": ["ਬਹੁਤ", "ਵਧੀਆ", "ਹੈ"]},
-  {"name": "marathi with danda", "input": "खूप छान आहे।", "options": {}, "expected": ["खूप", "छान", "आहे"]},
-  {"name": "tamil", "input": "இந்த படம் மிகவும் நன்றாக உள்ளது.", "options": {}, "expected": ["இந்த", "படம்", "மிகவும்", "நன்றாக", "உள்ளது"]},
-  {"name": "unlisted scripts fall back to letter runs", "input": "Привет мир 日本語abc", "options": {}, "expected": ["Привет", "мир", "日本語", "abc"]},
-  {"name": "emoji sequences", "input": "great 👍🏽 and ❤\ufe0f and 👨\u200d👩\u200d👧 🇮🇳 end", "options": {}, "expected": ["great", "👍🏽", "and", "❤\ufe0f", "and", "👨\u200d👩\u200d👧", "🇮🇳", "end"]},
-  {"name": "repeated emoji are separate tokens", "input": "😂😂😂", "options": {}, "expected": ["😂", "😂", "😂"]},
-  {"name": "keycap", "input": "1\ufe0f⃣ 2", "options": {}, "expected": ["1\ufe0f⃣"]},
-  {"name": "emoji glued to a word", "input": "wow🔥", "options": {}, "expected": ["wow", "🔥"]},
-  {"name": "emoticons", "input": "good:) bad :( <3 :D :Dog", "options": {}, "expected": ["good", ":)", "bad", ":(", "<3", ":D", "Dog"]},
-  {"name": "hashtag and mention", "input": "#awesome @user", "options": {}, "expected": ["awesome", "user"]},
-  {"name": "numbers, currency and punctuation are dropped", "input": "rated 4.5/5 for ₹1,000", "options": {}, "expected": ["rated", "for"]},
-  {"name": "fullwidth and math bold letters", "input": "Ｇｏｏｄ 𝐇𝐞𝐥𝐥𝐨", "options": {}, "expected": ["Good", "Hello"]},
-  {"name": "nukta precomposed", "input": "क़", "options": {}, "expected": ["क़"]},
-  {"name": "nukta decomposed", "input": "क़", "options": {}, "expected": ["क़"]},
-  {"name": "nukta precomposed, normalize off", "input": "क़", "options": {"normalize": null}, "expected": ["क़"]},
-  {"name": "plain url", "input": "see https://example.com/a?b=1 now", "options": {}, "expected": ["see", "now"]},
-  {"name": "url with parens and trailing punctuation", "input": "(see https://en.wikipedia.org/wiki/Foo_(bar)). ok", "options": {}, "expected": ["see", "ok"]},
-  {"name": "url followed by hindi without a space", "input": "देखो https://x.com/abcबहुत अच्छा", "options": {}, "expected": ["देखो", "बहुत", "अच्छा"]},
-  {"name": "www and bare domain with path", "input": "visit www.example.com or bit.ly/xyz today", "options": {}, "expected": ["visit", "or", "today"]},
-  {"name": "bare domain without path stays", "input": "go to example.com now", "options": {}, "expected": ["go", "to", "example", "com", "now"]},
-  {"name": "lookalike is not a url", "input": "Mr.Smith/John", "options": {}, "expected": ["Mr", "Smith", "John"]},
-  {"name": "emails", "input": "mail josé@example.com or a.b+c@d.co.in please", "options": {}, "expected": ["mail", "or", "please"]},
-  {"name": "url between words does not glue them", "input": "great http://a.com stuff", "options": {}, "expected": ["great", "stuff"]},
-  {"name": "markdown asterisks around a url", "input": "*https://y.com* ok", "options": {}, "expected": ["ok"]},
-  {"name": "keycap after a digit run", "input": "33⃣", "options": {}, "expected": ["3⃣"]},
-  {"name": "nothing but numbers and punctuation", "input": "!!! 123, ... ₹ 4.5/5 ?", "options": {}, "expected": []}
- ]
+  "about": "Shared test vectors for the SentiVox tokenizer. Every port (Python, TypeScript, Java) must produce exactly 'expected' for 'input'; the cleaned text is the tokens joined with single spaces. Options: normalize (default 'NFKC', null = off), lowercase (default true), demojize (default true). Invisible characters are written as \\u escapes on purpose.",
+  "cases": [
+    {
+      "name": "english basic",
+      "input": "This movie was GOOD!",
+      "options": {},
+      "expected": [
+        "this",
+        "movie",
+        "was",
+        "good",
+        "!"
+      ]
+    },
+    {
+      "name": "lowercase off keeps case but folds shouting",
+      "input": "This movie was GOOD!",
+      "options": {
+        "lowercase": false
+      },
+      "expected": [
+        "This",
+        "movie",
+        "was",
+        "good",
+        "!"
+      ]
+    },
+    {
+      "name": "empty string",
+      "input": "",
+      "options": {},
+      "expected": []
+    },
+    {
+      "name": "only whitespace",
+      "input": "   \n\t \r\n ",
+      "options": {},
+      "expected": []
+    },
+    {
+      "name": "initialism",
+      "input": "U.S.A rocks",
+      "options": {},
+      "expected": [
+        "u",
+        ".",
+        "s",
+        ".",
+        "a",
+        "rocks"
+      ]
+    },
+    {
+      "name": "contractions",
+      "input": "I don't like it, can’t stand it",
+      "options": {},
+      "expected": [
+        "i",
+        "don't",
+        "like",
+        "it",
+        ",",
+        "can't",
+        "stand",
+        "it"
+      ]
+    },
+    {
+      "name": "curly apostrophe kept when normalize is off",
+      "input": "can’t",
+      "options": {
+        "normalize": null
+      },
+      "expected": [
+        "can’t"
+      ]
+    },
+    {
+      "name": "apostrophe edges",
+      "input": "'quoted' dogs' rock'n'roll",
+      "options": {},
+      "expected": [
+        "'",
+        "quoted",
+        "'",
+        "dogs",
+        "'",
+        "rock'n'roll"
+      ]
+    },
+    {
+      "name": "negations and stopwords are kept",
+      "input": "not bad at all, not good either",
+      "options": {},
+      "expected": [
+        "not",
+        "bad",
+        "at",
+        "all",
+        ",",
+        "not",
+        "good",
+        "either"
+      ]
+    },
+    {
+      "name": "danda is punctuation",
+      "input": "मैं बहुत खुश हूँ। सच में।",
+      "options": {},
+      "expected": [
+        "मैं",
+        "बहुत",
+        "खुश",
+        "हूँ",
+        "।",
+        "सच",
+        "में",
+        "।"
+      ]
+    },
+    {
+      "name": "double danda",
+      "input": "राम॥",
+      "options": {},
+      "expected": [
+        "राम",
+        "॥"
+      ]
+    },
+    {
+      "name": "digits are kept",
+      "input": "साल२५ और abc123",
+      "options": {},
+      "expected": [
+        "साल",
+        "२५",
+        "और",
+        "abc123"
+      ]
+    },
+    {
+      "name": "digits of any script make one number",
+      "input": "12३",
+      "options": {},
+      "expected": [
+        "12३"
+      ]
+    },
+    {
+      "name": "arabic-indic digits",
+      "input": "٢٠٢٦ و ۲۰۲۶",
+      "options": {},
+      "expected": [
+        "٢٠٢٦",
+        "و",
+        "۲۰۲۶"
+      ]
+    },
+    {
+      "name": "mixed scripts without a space",
+      "input": "हैLove",
+      "options": {},
+      "expected": [
+        "है",
+        "love"
+      ]
+    },
+    {
+      "name": "bengali ya-phala keeps ZWJ",
+      "input": "র\u200d্যাব ভালো",
+      "options": {},
+      "expected": [
+        "র\u200d্যাব",
+        "ভালো"
+      ]
+    },
+    {
+      "name": "hindi conjunct keeps ZWJ",
+      "input": "क्\u200dष",
+      "options": {},
+      "expected": [
+        "क्\u200dष"
+      ]
+    },
+    {
+      "name": "trailing ZWNJ is dropped",
+      "input": "कर\u200c हूँ",
+      "options": {},
+      "expected": [
+        "कर",
+        "हूँ"
+      ]
+    },
+    {
+      "name": "lone ZWJ between words is ignored",
+      "input": "a \u200d b",
+      "options": {},
+      "expected": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "name": "CRLF",
+      "input": "good\r\nbad",
+      "options": {},
+      "expected": [
+        "good",
+        "bad"
+      ]
+    },
+    {
+      "name": "nbsp and ideographic space",
+      "input": "good\u00a0bad\u3000ok",
+      "options": {},
+      "expected": [
+        "good",
+        "bad",
+        "ok"
+      ]
+    },
+    {
+      "name": "nbsp and ideographic space, normalize off",
+      "input": "good\u00a0bad\u3000ok",
+      "options": {
+        "normalize": null
+      },
+      "expected": [
+        "good",
+        "bad",
+        "ok"
+      ]
+    },
+    {
+      "name": "zwsp and bom",
+      "input": "\ufeffgood\u200bbad",
+      "options": {},
+      "expected": [
+        "good",
+        "bad"
+      ]
+    },
+    {
+      "name": "control chars separate tokens",
+      "input": "a\u0000b",
+      "options": {},
+      "expected": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "name": "stray variation selector",
+      "input": "ok\ufe0f",
+      "options": {},
+      "expected": [
+        "ok"
+      ]
+    },
+    {
+      "name": "accented latin",
+      "input": "café naïve shukriyā",
+      "options": {},
+      "expected": [
+        "café",
+        "naïve",
+        "shukriyā"
+      ]
+    },
+    {
+      "name": "urdu",
+      "input": "یہ بہت اچھا ہے۔",
+      "options": {},
+      "expected": [
+        "یہ",
+        "بہت",
+        "اچھا",
+        "ہے",
+        "۔"
+      ]
+    },
+    {
+      "name": "odia",
+      "input": "ଏହା ବହୁତ ଭଲ",
+      "options": {},
+      "expected": [
+        "ଏହା",
+        "ବହୁତ",
+        "ଭଲ"
+      ]
+    },
+    {
+      "name": "bengali",
+      "input": "খুব ভালো",
+      "options": {},
+      "expected": [
+        "খুব",
+        "ভালো"
+      ]
+    },
+    {
+      "name": "telugu",
+      "input": "చాలా బాగుంది",
+      "options": {},
+      "expected": [
+        "చాలా",
+        "బాగుంది"
+      ]
+    },
+    {
+      "name": "kannada",
+      "input": "ತುಂಬಾ ಚೆನ್ನಾಗಿದೆ",
+      "options": {},
+      "expected": [
+        "ತುಂಬಾ",
+        "ಚೆನ್ನಾಗಿದೆ"
+      ]
+    },
+    {
+      "name": "malayalam",
+      "input": "വളരെ നല്ലത്",
+      "options": {},
+      "expected": [
+        "വളരെ",
+        "നല്ലത്"
+      ]
+    },
+    {
+      "name": "gujarati",
+      "input": "ખૂબ સરસ છે",
+      "options": {},
+      "expected": [
+        "ખૂબ",
+        "સરસ",
+        "છે"
+      ]
+    },
+    {
+      "name": "gurmukhi",
+      "input": "ਬਹੁਤ ਵਧੀਆ ਹੈ",
+      "options": {},
+      "expected": [
+        "ਬਹੁਤ",
+        "ਵਧੀਆ",
+        "ਹੈ"
+      ]
+    },
+    {
+      "name": "marathi with danda",
+      "input": "खूप छान आहे।",
+      "options": {},
+      "expected": [
+        "खूप",
+        "छान",
+        "आहे",
+        "।"
+      ]
+    },
+    {
+      "name": "tamil",
+      "input": "இந்த படம் மிகவும் நன்றாக உள்ளது.",
+      "options": {},
+      "expected": [
+        "இந்த",
+        "படம்",
+        "மிகவும்",
+        "நன்றாக",
+        "உள்ளது",
+        "."
+      ]
+    },
+    {
+      "name": "unlisted scripts fall back to letter runs",
+      "input": "Привет мир 日本語abc",
+      "options": {},
+      "expected": [
+        "привет",
+        "мир",
+        "日本語",
+        "abc"
+      ]
+    },
+    {
+      "name": "fullwidth and math bold letters",
+      "input": "Ｇｏｏｄ 𝐇𝐞𝐥𝐥𝐨",
+      "options": {},
+      "expected": [
+        "good",
+        "hello"
+      ]
+    },
+    {
+      "name": "nukta precomposed",
+      "input": "क़",
+      "options": {},
+      "expected": [
+        "क़"
+      ]
+    },
+    {
+      "name": "nukta decomposed",
+      "input": "क़",
+      "options": {},
+      "expected": [
+        "क़"
+      ]
+    },
+    {
+      "name": "nukta precomposed, normalize off",
+      "input": "क़",
+      "options": {
+        "normalize": null
+      },
+      "expected": [
+        "क़"
+      ]
+    },
+    {
+      "name": "emoji become words",
+      "input": "great 👍🏽 and ❤\ufe0f and 👨\u200d👩\u200d👧 🇮🇳 end",
+      "options": {},
+      "expected": [
+        "great",
+        "thumbs",
+        "up",
+        "and",
+        "red",
+        "heart",
+        "and",
+        "man",
+        "woman",
+        "girl",
+        "flag",
+        "end"
+      ]
+    },
+    {
+      "name": "emoji kept when demojize is off",
+      "input": "great 👍🏽 and ❤\ufe0f and 👨\u200d👩\u200d👧 🇮🇳 end",
+      "options": {
+        "demojize": false
+      },
+      "expected": [
+        "great",
+        "👍🏽",
+        "and",
+        "❤\ufe0f",
+        "and",
+        "👨\u200d👩\u200d👧",
+        "🇮🇳",
+        "end"
+      ]
+    },
+    {
+      "name": "repeated emoji, at most three",
+      "input": "😂😂😂😂😂",
+      "options": {},
+      "expected": [
+        "face",
+        "with",
+        "tears",
+        "of",
+        "joy",
+        "face",
+        "with",
+        "tears",
+        "of",
+        "joy",
+        "face",
+        "with",
+        "tears",
+        "of",
+        "joy"
+      ]
+    },
+    {
+      "name": "repeated emoji, at most three, demojize off",
+      "input": "😂😂😂😂",
+      "options": {
+        "demojize": false
+      },
+      "expected": [
+        "😂",
+        "😂",
+        "😂"
+      ]
+    },
+    {
+      "name": "keycap",
+      "input": "1\ufe0f⃣ 2",
+      "options": {},
+      "expected": [
+        "1",
+        "2"
+      ]
+    },
+    {
+      "name": "emoji glued to a word",
+      "input": "wow🔥",
+      "options": {},
+      "expected": [
+        "wow",
+        "fire"
+      ]
+    },
+    {
+      "name": "emoji glued to a word, demojize off",
+      "input": "wow🔥",
+      "options": {
+        "demojize": false
+      },
+      "expected": [
+        "wow",
+        "🔥"
+      ]
+    },
+    {
+      "name": "zwj sequence drops the gender sign",
+      "input": "🤦\u200d♂\ufe0f",
+      "options": {},
+      "expected": [
+        "facepalm"
+      ]
+    },
+    {
+      "name": "emoticons become words",
+      "input": "good:) bad :( <3 :D :Dog",
+      "options": {},
+      "expected": [
+        "good",
+        "slightly",
+        "smiling",
+        "face",
+        "bad",
+        "slightly",
+        "frowning",
+        "face",
+        "red",
+        "heart",
+        "grinning",
+        "face",
+        "with",
+        "big",
+        "eyes",
+        ":",
+        "dog"
+      ]
+    },
+    {
+      "name": "emoticons kept when demojize is off",
+      "input": "good:) bad :( <3 :D :Dog",
+      "options": {
+        "demojize": false
+      },
+      "expected": [
+        "good",
+        ":)",
+        "bad",
+        ":(",
+        "<3",
+        ":D",
+        ":",
+        "dog"
+      ]
+    },
+    {
+      "name": "an emoticon and its emoji give the same words",
+      "input": "🙂 :)",
+      "options": {},
+      "expected": [
+        "slightly",
+        "smiling",
+        "face",
+        "slightly",
+        "smiling",
+        "face"
+      ]
+    },
+    {
+      "name": "star ratings",
+      "input": "★★★★☆ meh",
+      "options": {},
+      "expected": [
+        "4/5",
+        "stars",
+        "meh"
+      ]
+    },
+    {
+      "name": "plain url",
+      "input": "see https://example.com/a?b=1 now",
+      "options": {},
+      "expected": [
+        "see",
+        "[URL]",
+        "now"
+      ]
+    },
+    {
+      "name": "url with parens and trailing punctuation",
+      "input": "(see https://en.wikipedia.org/wiki/Foo_(bar)). ok",
+      "options": {},
+      "expected": [
+        "(",
+        "see",
+        "[URL]",
+        ")",
+        ".",
+        "ok"
+      ]
+    },
+    {
+      "name": "url followed by hindi without a space",
+      "input": "देखो https://x.com/abcबहुत अच्छा",
+      "options": {},
+      "expected": [
+        "देखो",
+        "[URL]",
+        "बहुत",
+        "अच्छा"
+      ]
+    },
+    {
+      "name": "www and bare domain with path",
+      "input": "visit www.example.com or bit.ly/xyz today",
+      "options": {},
+      "expected": [
+        "visit",
+        "[URL]",
+        "or",
+        "[URL]",
+        "today"
+      ]
+    },
+    {
+      "name": "bare domain without path",
+      "input": "go to example.com now",
+      "options": {},
+      "expected": [
+        "go",
+        "to",
+        "[URL]",
+        "now"
+      ]
+    },
+    {
+      "name": "a missing space after a full stop is not a url",
+      "input": "Nice movie.In the end",
+      "options": {},
+      "expected": [
+        "nice",
+        "movie",
+        ".",
+        "in",
+        "the",
+        "end"
+      ]
+    },
+    {
+      "name": "lookalike is not a url",
+      "input": "Mr.Smith/John",
+      "options": {},
+      "expected": [
+        "mr",
+        ".",
+        "smith",
+        "/",
+        "john"
+      ]
+    },
+    {
+      "name": "emails",
+      "input": "mail josé@example.com or a.b+c@d.co.in please",
+      "options": {},
+      "expected": [
+        "mail",
+        "[EMAIL]",
+        "or",
+        "[EMAIL]",
+        "please"
+      ]
+    },
+    {
+      "name": "obfuscated email",
+      "input": "write to john [at] gmail [dot] com",
+      "options": {},
+      "expected": [
+        "write",
+        "to",
+        "[EMAIL]"
+      ]
+    },
+    {
+      "name": "url between words does not glue them",
+      "input": "great http://a.com stuff",
+      "options": {},
+      "expected": [
+        "great",
+        "[URL]",
+        "stuff"
+      ]
+    },
+    {
+      "name": "markdown asterisks around a url",
+      "input": "*https://y.com* ok",
+      "options": {},
+      "expected": [
+        "[URL]",
+        "ok"
+      ]
+    },
+    {
+      "name": "mentions",
+      "input": "@united lost my bag, thanks u/someone",
+      "options": {},
+      "expected": [
+        "[USER]",
+        "lost",
+        "my",
+        "bag",
+        ",",
+        "thanks",
+        "[USER]"
+      ]
+    },
+    {
+      "name": "an @ inside a word or before a time is not a mention",
+      "input": "sh@t, meet @5pm",
+      "options": {},
+      "expected": [
+        "sh",
+        "@",
+        "t",
+        ",",
+        "meet",
+        "@",
+        "5pm"
+      ]
+    },
+    {
+      "name": "repeated placeholders collapse",
+      "input": "@a @b @c thanks",
+      "options": {},
+      "expected": [
+        "[USER]",
+        "thanks"
+      ]
+    },
+    {
+      "name": "phones",
+      "input": "call +91 98765 43210 or 555-123-4567",
+      "options": {},
+      "expected": [
+        "call",
+        "[PHONE]",
+        "or",
+        "[PHONE]"
+      ]
+    },
+    {
+      "name": "a phone named by the words before it",
+      "input": "my number is 555-1234",
+      "options": {},
+      "expected": [
+        "my",
+        "number",
+        "is",
+        "[PHONE]"
+      ]
+    },
+    {
+      "name": "ids named by the words before them",
+      "input": "order #12345, OTP is 4821, use code SAVE20",
+      "options": {},
+      "expected": [
+        "order",
+        "[ID]",
+        ",",
+        "otp",
+        "is",
+        "[ID]",
+        ",",
+        "use",
+        "code",
+        "[ID]"
+      ]
+    },
+    {
+      "name": "tracking numbers and uuids",
+      "input": "AWB 1Z999AA10123456784 ORD123456789 550e8400-e29b-41d4-a716-446655440000",
+      "options": {},
+      "expected": [
+        "awb",
+        "[ID]"
+      ]
+    },
+    {
+      "name": "ip addresses",
+      "input": "from 192.168.0.1:8080 and fe80::1",
+      "options": {},
+      "expected": [
+        "from",
+        "[IP]",
+        "and",
+        "[IP]"
+      ]
+    },
+    {
+      "name": "years, dates and quantities are not ids",
+      "input": "in 2018 on 2023-10-25 at 10:30pm, 10000mAh, 1920x1080, 1080p, COVID-19",
+      "options": {},
+      "expected": [
+        "in",
+        "2018",
+        "on",
+        "2023",
+        "-",
+        "10",
+        "-",
+        "25",
+        "at",
+        "10:30pm",
+        ",",
+        "10000mah",
+        ",",
+        "1920x1080",
+        ",",
+        "1080p",
+        ",",
+        "covid",
+        "-",
+        "19"
+      ]
+    },
+    {
+      "name": "boilerplate: retweet",
+      "input": "RT @user: so good",
+      "options": {},
+      "expected": [
+        "[RT]",
+        "[USER]",
+        ":",
+        "so",
+        "good"
+      ]
+    },
+    {
+      "name": "boilerplate: chat export",
+      "input": "<Media omitted>",
+      "options": {},
+      "expected": [
+        "[RT]"
+      ]
+    },
+    {
+      "name": "boilerplate: deleted message",
+      "input": "This message was deleted",
+      "options": {},
+      "expected": [
+        "[RT]"
+      ]
+    },
+    {
+      "name": "boilerplate: read more",
+      "input": "Loved it… Read more",
+      "options": {},
+      "expected": [
+        "loved",
+        "it",
+        "[RT]"
+      ]
+    },
+    {
+      "name": "read more inside a sentence stays",
+      "input": "I should read more books",
+      "options": {},
+      "expected": [
+        "i",
+        "should",
+        "read",
+        "more",
+        "books"
+      ]
+    },
+    {
+      "name": "boilerplate: reddit",
+      "input": "[deleted]",
+      "options": {},
+      "expected": [
+        "[RT]"
+      ]
+    },
+    {
+      "name": "dataset placeholders are kept",
+      "input": "[NAME] is great",
+      "options": {},
+      "expected": [
+        "[NAME]",
+        "is",
+        "great"
+      ]
+    },
+    {
+      "name": "elongation",
+      "input": "Sooooo goooood hahahahaha",
+      "options": {},
+      "expected": [
+        "soo",
+        "good",
+        "hahaha"
+      ]
+    },
+    {
+      "name": "roman numerals are not elongations",
+      "input": "World War III",
+      "options": {},
+      "expected": [
+        "world",
+        "war",
+        "iii"
+      ]
+    },
+    {
+      "name": "repeated punctuation",
+      "input": "what?!?!?! no!!!!!!",
+      "options": {},
+      "expected": [
+        "what",
+        "?!?!?!",
+        "no",
+        "!!!"
+      ]
+    },
+    {
+      "name": "repeated words, at most three",
+      "input": "lol lol lol lol lol",
+      "options": {},
+      "expected": [
+        "lol",
+        "lol",
+        "lol"
+      ]
+    },
+    {
+      "name": "spaced dots",
+      "input": "fun. . . If",
+      "options": {},
+      "expected": [
+        "fun",
+        "...",
+        "if"
+      ]
+    },
+    {
+      "name": "html entities and tags",
+      "input": "I &lt;3 it<br />&amp; more",
+      "options": {},
+      "expected": [
+        "i",
+        "red",
+        "heart",
+        "it",
+        "&",
+        "more"
+      ]
+    },
+    {
+      "name": "mojibake",
+      "input": "donâ€™t",
+      "options": {},
+      "expected": [
+        "don't"
+      ]
+    },
+    {
+      "name": "hashtags lose the #",
+      "input": "#awesome #NeverAgain #भारत",
+      "options": {},
+      "expected": [
+        "awesome",
+        "never",
+        "again",
+        "भारत"
+      ]
+    },
+    {
+      "name": "markdown",
+      "input": "**so** good, ~~not~~ *really*",
+      "options": {},
+      "expected": [
+        "so",
+        "good",
+        ",",
+        "not",
+        "really"
+      ]
+    },
+    {
+      "name": "reddit quote marker",
+      "input": "> you said this\nno",
+      "options": {},
+      "expected": [
+        "you",
+        "said",
+        "this",
+        "no"
+      ]
+    },
+    {
+      "name": "censored words stay whole",
+      "input": "f**k this sh**",
+      "options": {},
+      "expected": [
+        "f**k",
+        "this",
+        "sh**"
+      ]
+    },
+    {
+      "name": "sarcasm marker is kept",
+      "input": "great job /s",
+      "options": {},
+      "expected": [
+        "great",
+        "job",
+        "/",
+        "s"
+      ]
+    },
+    {
+      "name": "noise symbols are dropped",
+      "input": "a | b ~ c ^ d • e",
+      "options": {},
+      "expected": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e"
+      ]
+    },
+    {
+      "name": "numbers, currency and punctuation are kept",
+      "input": "rated 4.5/5 for ₹1,000!!!!",
+      "options": {},
+      "expected": [
+        "rated",
+        "4.5/5",
+        "for",
+        "₹",
+        "1,000",
+        "!!!"
+      ]
+    },
+    {
+      "name": "nothing but numbers and punctuation",
+      "input": "!!! 123, ... ₹ 4.5/5 ?",
+      "options": {},
+      "expected": [
+        "!!!",
+        "123",
+        ",",
+        "...",
+        "₹",
+        "4.5/5",
+        "?"
+      ]
+    }
+  ]
 }
