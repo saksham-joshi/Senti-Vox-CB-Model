@@ -29,9 +29,17 @@ import unicodedata
 from functools import lru_cache
 from typing import Dict, List, Optional, Tuple
 
-from .base_tokenizer import BaseTokenizer
+class _Placeholders :
+    URL = "[URL]"
+    EMAIL = "[EMAIL]"
+    USER = "[USER]"
+    NAME = "[NAME]"  # @usernames
+    PHONE = "[PHONE]"
+    ID = "[ID]"   # Order IDs, tracking numbers, OTPs, promo codes, reference IDs
+    IP = "[IP]"
+    RT = "[RT]"   # Platform boilerplate: Read more..., <Media omitted>, This message was deleted
 
-_P = BaseTokenizer.Placeholders
+_P = _Placeholders
 
 # Every placeholder the cleaner can emit. Register them with the model's
 # tokenizer (see register_placeholders) so each one is a single token.
@@ -805,7 +813,7 @@ def _keep_punct(ch: str) -> bool:
 # --------------------------------------------------------------------------
 
 
-class SentiVoxTokenizer(BaseTokenizer):
+class SentiVoxTokenizer:
     """Cleans text for the SentiVox model. Use the same settings for the
     training data and in production, or the model sees two different inputs.
 
