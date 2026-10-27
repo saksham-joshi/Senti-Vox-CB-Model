@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 
 from scripts.tokenizer import (
+    _PLACEHOLDER_SEEDS,
     PLACEHOLDER_TOKENS,
     SentiVoxTokenizer,
     clean_text,
@@ -193,6 +194,8 @@ class PythonOnly(unittest.TestCase):
         self.assertEqual(stub.added, list(PLACEHOLDER_TOKENS))
         self.assertTrue(stub.assertion)
         self.assertEqual(register_placeholders(stub), 0)
+        # every placeholder starts from a seed word's embedding
+        self.assertEqual(set(_PLACEHOLDER_SEEDS), set(PLACEHOLDER_TOKENS))
 
     def test_export_tables(self):
         tables = export_tables()

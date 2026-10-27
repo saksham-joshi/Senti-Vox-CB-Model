@@ -665,9 +665,9 @@
       "expected": [
         "mr",
         ".",
-        "smith",
+        "[NAME]",
         "/",
-        "john"
+        "[NAME]"
       ]
     },
     {
@@ -1066,6 +1066,111 @@
         "₹",
         "4.5/5",
         "?"
+      ]
+    },
+    {
+      "name": "names become [NAME]",
+      "input": "Rahul Sharma loved it, Priya's acting too",
+      "options": {},
+      "expected": [
+        "[NAME]",
+        "loved",
+        "it",
+        ",",
+        "[NAME]",
+        "acting",
+        "too"
+      ]
+    },
+    {
+      "name": "names that are everyday words stay words",
+      "input": "Hope Will and Rose love it",
+      "options": {},
+      "expected": [
+        "hope",
+        "will",
+        "and",
+        "rose",
+        "love",
+        "it"
+      ]
+    },
+    {
+      "name": "religions and their followers become [RELIGION]",
+      "input": "Muslims, Hindus and a Jain friend",
+      "options": {},
+      "expected": [
+        "[RELIGION]",
+        ",",
+        "[RELIGION]",
+        "and",
+        "a",
+        "[RELIGION]",
+        "friend"
+      ]
+    },
+    {
+      "name": "a religion right after a name is a surname",
+      "input": "Rahul Jain called",
+      "options": {},
+      "expected": [
+        "[NAME]",
+        "called"
+      ]
+    },
+    {
+      "name": "hinglish words are not names",
+      "input": "abhi kaam kiya, bahut khushi hui",
+      "options": {},
+      "expected": [
+        "abhi",
+        "kaam",
+        "kiya",
+        ",",
+        "bahut",
+        "khushi",
+        "hui"
+      ]
+    },
+    {
+      "name": "emoji words are not names",
+      "input": "🦊🌷",
+      "options": {},
+      "expected": [
+        "fox",
+        "face",
+        "tulip"
+      ]
+    },
+    {
+      "name": "words of the other lists are not names",
+      "input": "Jordan in May",
+      "options": {},
+      "expected": [
+        "jordan",
+        "in",
+        "may"
+      ]
+    },
+    {
+      "name": "name in a hashtag",
+      "input": "#RahulGandhi rocks",
+      "options": {},
+      "expected": [
+        "[NAME]",
+        "rocks"
+      ]
+    },
+    {
+      "name": "name placeholders stay uppercase",
+      "input": "RAHUL and priya",
+      "options": {
+        "lowercase": false
+      },
+      "expected": [
+        "[NAME]",
+        "and",
+        "[NAME]"
       ]
     }
   ]
