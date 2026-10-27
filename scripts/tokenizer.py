@@ -6,7 +6,10 @@ model, the same way for the training data and for production traffic:
 * URLs, e-mails, @usernames, phone numbers, IDs (order numbers, OTPs,
   tracking numbers, promo codes, UUIDs, ...), IP addresses and platform
   boilerplate ("RT @x:", "<Media omitted>", "Read more", ...) become the
-  placeholders defined in base.py.
+  placeholders defined below.
+* Person names and religions become [NAME] and [RELIGION], from the word
+  lists in values.json, so the model cannot tie sentiment to a person or a
+  faith. Names that are also everyday words ("Hope", "Will") are kept.
 * Everything that carries sentiment is kept: words in every script,
   negations and contractions, numbers ("10/10", "1 star"), and punctuation
   like "!", "?" and "/s".
@@ -24,27 +27,30 @@ model, the same way for the training data and for production traffic:
 from __future__ import annotations
 
 import html
+import json
 import re
 import unicodedata
 from functools import lru_cache
-from typing import Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Dict, FrozenSet, List, Optional, Tuple
 
 class _Placeholders :
     URL = "[URL]"
     EMAIL = "[EMAIL]"
-    USER = "[USER]"
-    NAME = "[NAME]"  # @usernames
+    USER = "[USER]"   # @usernames
+    NAME = "[NAME]"   # person names, from values.json
     PHONE = "[PHONE]"
     ID = "[ID]"   # Order IDs, tracking numbers, OTPs, promo codes, reference IDs
     IP = "[IP]"
     RT = "[RT]"   # Platform boilerplate: Read more..., <Media omitted>, This message was deleted
+    RELIGION = "[RELIGION]"   # religions and their followers, from values.json
 
 _P = _Placeholders
 
 # Every placeholder the cleaner can emit. Register them with the model's
 # tokenizer (see register_placeholders) so each one is a single token.
 PLACEHOLDER_TOKENS: Tuple[str, ...] = (
-    _P.URL, _P.EMAIL, _P.USER, _P.NAME, _P.PHONE, _P.ID, _P.IP, _P.RT,
+    _P.URL, _P.EMAIL, _P.USER, _P.NAME, _P.PHONE, _P.ID, _P.IP, _P.RT, _P.RELIGION,
 )
 _PLACEHOLDERS = frozenset(PLACEHOLDER_TOKENS)
 
@@ -809,6 +815,60 @@ def _keep_punct(ch: str) -> bool:
 
 
 # --------------------------------------------------------------------------
+# Names and religions -> [NAME], [RELIGION]
+# --------------------------------------------------------------------------
+
+# The word lists. Ship this file with tokenizer.py: production has to mask
+# the same words as training did.
+VALUES_FILE = Path(__file__).with_name("values.json")
+
+# lists in values.json that are not things to mask on their own
+_NOT_ENTITY_LISTS = frozenset(("names", "religions", "name_exceptions"))
+
+
+def _emoji_words() -> FrozenSet[str]:
+    """Every word an emoji can be written as ("fox face", "tulip", "om")."""
+    words = {"flag", "stars"}
+    for lo, hi in ((0x2000, 0x3300), (0x1F000, 0x1FB00)):
+        for cp in range(lo, hi):
+            if _EMOJI_RE.fullmatch(chr(cp)):
+                words.update(_char_name(chr(cp)).split())
+    return frozenset(words)
+
+
+def _load_entity_words(path: Path) -> Dict[str, str]:
+    """Lowercase word -> [NAME] or [RELIGION].
+
+    A name stays a word when it is also an everyday word ("name_exceptions",
+    made by build_name_exceptions.py), a religion ("Jain"), a word in any
+    other list ("May" is a month, "Jordan" a country), or part of an emoji's
+    name ("🦊" is "fox face", so "Fox" stays too).
+    """
+    values = json.loads(path.read_text(encoding="utf-8"))
+    norm = lambda word: unicodedata.normalize("NFKC", word).lower()
+    religions = set(map(norm, values["religions"]))
+    keep = set(map(norm, values.get("name_exceptions", ()))) | religions | _emoji_words()
+    for key, words in values.items():
+        if key not in _NOT_ENTITY_LISTS:
+            keep.update(map(norm, words))
+    entities = {word: _P.NAME for word in map(norm, values["names"]) if word not in keep}
+    entities.update(dict.fromkeys(religions, _P.RELIGION))
+    return entities
+
+
+_ENTITY_WORDS = _load_entity_words(VALUES_FILE)
+
+
+def _entity(word: str) -> Optional[str]:
+    """The placeholder for a name or religion word, also possessive ("Rahul's")."""
+    key = word.lower()
+    found = _ENTITY_WORDS.get(key)
+    if found is None and len(key) > 2 and key[-1] == "s" and key[-2] in "'\u2019\u02bc":
+        found = _ENTITY_WORDS.get(key[:-2])
+    return found
+
+
+# --------------------------------------------------------------------------
 # Public API
 # --------------------------------------------------------------------------
 
@@ -927,11 +987,16 @@ class SentiVoxTokenizer:
             kind, tok = m.lastgroup, m.group()
 
             if kind == "word":
-                if (len(tok) > 2 and (_ELONGATED.search(tok) or _REPEATED_PAIR.search(tok))
-                        and not _ROMAN.fullmatch(tok)):
-                    tok = _REPEATED_PAIR.sub(_keep_6, _ELONGATED.sub(_keep_2, tok))
-                if lowercase or (tok.isupper() and sum(c.isalpha() for c in tok) > 1):
-                    tok = tok.lower()
+                entity = _entity(tok)
+                if entity is not None:
+                    # a religion right after a name is a surname: "Rahul Jain"
+                    tok = _P.NAME if prev == _P.NAME else entity
+                else:
+                    if (len(tok) > 2 and (_ELONGATED.search(tok) or _REPEATED_PAIR.search(tok))
+                            and not _ROMAN.fullmatch(tok)):
+                        tok = _REPEATED_PAIR.sub(_keep_6, _ELONGATED.sub(_keep_2, tok))
+                    if lowercase or (tok.isupper() and sum(c.isalpha() for c in tok) > 1):
+                        tok = tok.lower()
             elif kind == "num":
                 if lowercase:
                     tok = tok.lower()
@@ -1002,6 +1067,7 @@ def clean_text(
 _PLACEHOLDER_SEEDS = {
     _P.URL: "link", _P.EMAIL: "email", _P.USER: "user", _P.NAME: "name",
     _P.PHONE: "phone", _P.ID: "number", _P.IP: "address", _P.RT: "repost",
+    _P.RELIGION: "religion",
 }
 
 
